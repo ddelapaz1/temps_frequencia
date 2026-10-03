@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Senyal temporal i espectre de mòdul</title>
+<style>
+  :root{
+    --text:#2C2C2B; --muted:#7D7A75; --bg:#FFFFFF; --soft:#F9F8F7; --soft2:#F0EFED; --border:#E6E5E3;
+    --blue:#2783DE; --blue-soft:#E5F2FC; --orange:#D5803B; --orange-soft:#FBEBDE;
+    --red:#E56458; --red-soft:#FCE9E7; --green:#46A171; --green-soft:#E8F1EC;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--text);background:var(--soft);line-height:1.5}
+  header{max-width:1320px;margin:0 auto;padding:24px 24px 6px}
+  h1{margin:0 0 4px;font-size:1.6rem;letter-spacing:-.01em}
+  header p{margin:0;color:var(--muted)}
+  main{max-width:1320px;margin:0 auto;padding:16px 24px 32px;display:grid;grid-template-columns:330px 1fr;gap:20px}
+  .card{background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:18px}
+  h2{font-size:1.05rem;margin:0 0 12px}
+  .group{margin-bottom:20px}
+  .glabel{display:block;font-weight:700;font-size:.95rem;margin-bottom:8px}
+  .sigs{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .btn,.chip{font:inherit;cursor:pointer;border:1px solid var(--border);background:#fff;color:var(--text);border-radius:10px;font-weight:600}
+  .btn{width:100%;padding:12px 10px;font-size:.98rem}
+  .sigs .btn{padding:14px 8px;display:flex;flex-direction:column;align-items:center;gap:2px}
+  .sigs .btn .ico{font-size:1.35rem;line-height:1}
+  .btn:hover,.chip:hover{background:var(--soft)}
+  .btn.on,.chip.on{background:var(--blue);border-color:var(--blue);color:#fff}
+  .btn.danger{background:var(--red-soft);border-color:#F3C3BD;color:#A33A2F}
+  .btn.sec{background:var(--soft2)}
+  .btn:focus-visible,.chip:focus-visible,input:focus-visible{outline:3px solid var(--blue-soft);outline-offset:2px}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{padding:10px 12px;font-size:.92rem;min-width:62px}
+  .stack{display:grid;gap:8px}
+  .hidden{display:none!important}
+  input[type=range]{width:100%;accent-color:var(--blue);height:28px}
+  .row{display:flex;justify-content:space-between;align-items:baseline;font-weight:600;font-size:.92rem}
+  .row .val{color:var(--blue);font-variant-numeric:tabular-nums}
+  .check{display:flex;gap:8px;align-items:center;cursor:pointer;font-size:.93rem}
+  .check input{width:18px;height:18px;accent-color:var(--orange)}
+  .note{font-size:.84rem;color:var(--muted);margin:6px 0 0}
+  .msg{display:none;font-size:.88rem;padding:10px 12px;border-radius:10px;margin-top:8px}
+  .msg.err{display:block;background:var(--red-soft);color:#8E2F25;border:1px solid #F3C3BD}
+  .msg.info{display:block;background:var(--blue-soft);color:#1C5C9C;border:1px solid #BFDDF7}
+  .demo-list{font-size:.88rem;margin:8px 0 0;padding-left:18px}
+  .file-label{display:block;text-align:center}
+  .file-label input{display:none}
+  .charts{display:grid;gap:16px;min-width:0}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+  .stat{background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 12px}
+  .stat .k{font-size:.78rem;color:var(--muted);font-weight:600}
+  .stat .v{font-size:1.15rem;font-weight:700;font-variant-numeric:tabular-nums}
+  .chart-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+  .chart-head h3{margin:0;font-size:1rem}
+  .badge{font-size:.75rem;font-weight:700;padding:3px 9px;border-radius:99px}
+  .badge.t{background:var(--blue-soft);color:var(--blue)}
+  .badge.th{background:var(--green-soft);color:var(--green)}
+  .badge.fft{background:var(--orange-soft);color:#A85F22}
+  .wrap{position:relative;width:100%;height:300px}
+  canvas{display:block;width:100%;height:100%;touch-action:none}
+  .wrap.phase{height:210px;margin-top:6px}
+  .subhead{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px;margin:14px 0 0;font-weight:700;font-size:.95rem}
+  .subhead small{font-weight:500;color:var(--muted);font-size:.82rem}
+  .tip{position:absolute;pointer-events:none;background:#2C2C2B;color:#fff;font-size:.82rem;padding:7px 10px;border-radius:8px;white-space:nowrap;display:none;z-index:5;line-height:1.35}
+  .legend{display:flex;flex-wrap:wrap;gap:16px;margin-top:8px;font-size:.86rem}
+  .legend span{display:inline-flex;align-items:center;gap:7px}
+  .sw{display:inline-block;width:26px;height:0;border-top:3px solid var(--blue)}
+  .sw.o{border-color:var(--orange)} .sw.d{border-top-style:dashed} .sw.g{border-color:#9C9994}
+  .sw.box{height:12px;border:1px solid #C9C7C3;background:repeating-linear-gradient(45deg,#EEE 0 4px,#fff 4px 8px)}
+  .sw.fill{height:12px;border:none;background:#BFDDF7;border-top:2px solid var(--blue)}
+  .link{background:var(--soft);border:1px dashed #D5D3CF;border-radius:10px;padding:10px 14px;font-size:.92rem}
+  .explain{grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px}
+  .explain h3{margin:0 0 6px;font-size:1rem}
+  .explain p,.explain li{font-size:.93rem;margin:0 0 6px}
+  .harm{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .harm span{font-size:.82rem;background:var(--blue-soft);color:#1C5C9C;padding:3px 8px;border-radius:7px;font-variant-numeric:tabular-nums}
+  .harm span.f0{background:var(--orange-soft);color:#A85F22;font-weight:700}
+  code{background:var(--soft2);padding:1px 5px;border-radius:5px;font-size:.9em}
+  @media (max-width:960px){ main{grid-template-columns:1fr} .wrap{height:260px} }
+  @media (max-width:520px){ header{padding:18px 16px 4px} main{padding:12px 14px 24px} h1{font-size:1.3rem} .wrap{height:230px} }
+</style>
+</head>
+<body>
+<header>
+  <h1>Senyal en el temps i espectre de mòdul</h1>
+  <p>Un mateix senyal vist de dues maneres: com varia amb el temps i quines freqüències el formen.</p>
+</header>
+
+<main>
+  <aside class="card" aria-label="Controls">
+    <div class="group">
+      <span class="glabel">Senyal</span>
+      <div class="sigs" role="group" aria-label="Tipus de senyal">
+        <button class="btn" data-sig="sin"><svg class="ico" width="34" height="18" viewBox="0 0 34 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" aria-hidden="true"><path d="M1 9 C5 -3 9 -3 13 9 S21 21 25 9 S31 1 33 5"/></svg>Sinusoidal</button>
+        <button class="btn" data-sig="tri"><svg class="ico" width="34" height="18" viewBox="0 0 34 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" aria-hidden="true"><path d="M1 9 L5 2 L13 16 L21 2 L29 16 L33 9"/></svg>Triangular</button>
+        <button class="btn" data-sig="sq"><svg class="ico" width="34" height="18" viewBox="0 0 34 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" aria-hidden="true"><path d="M1 16 L1 2 L9 2 L9 16 L17 16 L17 2 L25 2 L25 16 L33 16"/></svg>Quadrat</button>
+        <button class="btn" data-sig="snd"><span class="ico">🎧</span>So</button>
+      </div>
+    </div>
+
+    <div class="group" id="freqGroup">
+      <span class="glabel">Freqüència fonamental f₀</span>
+      <div class="chips" id="freqChips"></div>
+      <label class="check" style="margin-top:12px"><input type="checkbox" id="showFund"> Superposa la component fonamental</label>
+    </div>
+
+    <div class="group hidden" id="soundGroup">
+      <span class="glabel">Font del so</span>
+      <div class="stack">
+        <button class="btn" id="bDemo">🎼 So de demostració</button>
+        <label class="btn file-label" id="bFile">📁 Carrega un fitxer d'àudio<input type="file" id="fileIn" accept="audio/*"></label>
+        <button class="btn" id="bMic">🎤 Activa el micròfon</button>
+      </div>
+      <div id="demoBox" class="note">
+        La demostració suma tres sinusoides conegudes (f<sub>s</sub> = 48.000 Hz):
+        <ul class="demo-list" id="demoList"></ul>
+        <button class="btn sec" id="bDemoPlay" style="margin-top:6px">🔊 Escolta la demostració</button>
+      </div>
+      <div id="fileBox" class="hidden note">
+        <div id="fileName"></div>
+        <button class="btn sec" id="bPlay" style="margin-top:6px">▶ Reprodueix</button>
+      </div>
+      <div class="msg" id="soundMsg" role="status" aria-live="polite"></div>
+
+      <div style="margin-top:16px">
+        <span class="glabel">Mida de la FFT (N mostres)</span>
+        <div class="chips" id="nChips"></div>
+      </div>
+      <div style="margin-top:14px">
+        <div class="row"><span>Finestra temporal visible</span><span class="val" id="winVal">20 ms</span></div>
+        <input type="range" id="winMs" min="1" max="100" step="1" value="20" aria-label="Finestra temporal">
+      </div>
+    </div>
+
+    <div class="group">
+      <span class="glabel">Zoom de l'espectre</span>
+      <div class="chips" id="zoomChips"></div>
+    </div>
+
+    <button class="btn sec" id="bReset">Restableix valors inicials</button>
+  </aside>
+
+  <section class="charts">
+    <div class="stats" id="stats"></div>
+
+    <div class="card">
+      <div class="chart-head"><h3>Domini temporal · x(t)</h3><span class="badge t" id="tBadge">Senyal ideal</span></div>
+      <div class="wrap"><canvas id="cvT" aria-label="Gràfica temporal"></canvas></div>
+      <div class="legend" id="tLegend"></div>
+    </div>
+
+    <div class="link" id="linkTxt"></div>
+
+    <div class="card">
+      <div class="chart-head"><h3>Domini freqüencial · mòdul |X(f)| i fase φ(f)</h3><span class="badge th" id="fBadge">Espectre teòric de línies</span></div>
+      <div class="wrap" id="wrapF"><canvas id="cvF" aria-label="Espectre de mòdul"></canvas><div class="tip" id="tip"></div></div>
+      <div class="subhead">Espectre de fase φ(f) <small id="phNote"></small></div>
+      <div class="wrap phase"><canvas id="cvP" aria-label="Espectre de fase"></canvas></div>
+      <div class="legend" id="fLegend"></div>
+      <div class="harm" id="harmList"></div>
+    </div>
+  </section>
+
+  <section class="card explain" aria-label="Explicació">
+    <div>
+      <h3 id="exTitle">Què estàs veient?</h3>
+      <div id="exBody"></div>
+    </div>
+    <div>
+      <h3>Com llegir l'espectre de mòdul</h3>
+      <ul>
+        <li>Cada línia vertical és una <b>component sinusoidal</b>: la posició indica la seva freqüència i l'alçada, la seva amplitud.</li>
+        <li>L'espectre de <b>mòdul</b> no mostra els <b>signes ni les fases</b> dels coeficients: totes les línies són positives. Aquesta informació apareix a l'<b>espectre de fase</b>, a sota. Per exemple, a l'ona triangular els harmònics alternen el signe (+, −, +…), i a la fase això es veu com una alternança entre −90° i +90°.</li>
+        <li>La fase es representa amb el conveni <code>x(t) = Σ A<sub>n</sub>·cos(2π·f<sub>n</sub>·t + φ<sub>n</sub>)</code>, entre −180° i +180°. Un sinus pur, <code>sin(2π·f·t) = cos(2π·f·t − 90°)</code>, té una fase de <b>−90°</b>. La fase depèn de l'instant que es pren com a t = 0 (l'inici de la gràfica temporal).</li>
+        <li>El rang es limita a <b>0–20 kHz</b>, aproximadament el que pot sentir l'oïda humana. Les ones quadrada i triangular ideals tenen infinits harmònics: només es mostren els que queden per sota de 20 kHz.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Espectre teòric o estimat?</h3>
+      <p>Per als senyals periòdics es dibuixa l'<b>espectre teòric</b>, calculat amb la sèrie de Fourier. Per al so es fa una <b>estimació amb FFT</b>: s'agafen N mostres, es multipliquen per una <b>finestra de Hann</b> i se'n calcula la transformada.</p>
+      <p>La resolució és <code>Δf = f<sub>s</sub>/N</code> i només hi ha dades fins a <code>f<sub>s</sub>/2</code> (Nyquist). Les amplituds són lineals i estan corregides pel guany de la finestra. Si una freqüència no coincideix exactament amb un <i>bin</i>, el pic pot sortir una mica més baix.</p>
+    </div>
+  </section>
+</main>
+
+<script>
+(function(){
+'use strict';
+const $ = id => document.getElementById(id);
+const FREQS = [100, 250, 500, 1000, 2000];
+const ZOOMS = [20000, 10000, 5000, 2000, 1000];
+const NS = [2048, 4096, 8192, 16384, 32768];
+const FMAX = 20000;
+const DEMO_FS = 48000;
+const DEMO = [ {f:750, a:0.5, p:0}, {f:3000, a:0.3, p:0.7}, {f:9000, a:0.15, p:1.3} ];
+const C = { sig:'#2783DE', fund:'#D5803B', harm:'#2783DE', grid:'#F0EFED', axis:'#C9C7C3', txt:'#7D7A75', dark:'#2C2C2B' };
+const DEF = { sig:'sin', f0:500, zoom:20000, N:8192, winMs:20 };
+
+const S = { sig:DEF.sig, f0:DEF.f0, zoom:DEF.zoom, N:DEF.N, winMs:DEF.winMs, showFund:false,
+  source:'demo', frame:null, fs:DEMO_FS, mags:null, live:false, yF:0, yT:0, hover:null };
+
+// ---------- Format numèric en català ----------
+function fmt(x, d){ d = d || 0; const neg = x < 0; let s = Math.abs(x).toFixed(d); let [i, f] = s.split('.');
+  i = i.replace(/\B(?=(\d{3})+(?!\d))/g, '.'); return (neg ? '−' : '') + i + (f ? ',' + f : ''); }
+function fmtA(a){ if (a >= 0.1) return fmt(a, 3); if (a >= 0.001) return fmt(a, 4);
+  if (a === 0) return '0'; const e = Math.floor(Math.log10(a)); return fmt(a / Math.pow(10, e), 2) + '·10' + sup(e); }
+function sup(n){ const m = {'-':'⁻','0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'}; return String(n).split('').map(c => m[c]).join(''); }
+function wrapDeg(d){ d = ((d + 180) % 360 + 360) % 360 - 180; return d <= -180 + 1e-9 ? 180 : d; }
+function fmtDeg(d){ return fmt(Math.abs(d) < 0.05 ? 0 : d, Math.abs(d % 1) > 0.05 ? 1 : 0) + '°'; }
+const binPhase = k => wrapDeg(Math.atan2(S.im[k], S.re[k]) * 180 / Math.PI);
+function fmtHz(f){ return fmt(f, f < 100 && f % 1 ? 1 : 0) + ' Hz'; }
+function dec(step){ return Math.max(0, -Math.floor(Math.log10(step) + 1e-9)); }
+function niceStep(range, target){ const raw = range / target, p = Math.pow(10, Math.floor(Math.log10(raw))), m = raw / p;
+  return (m < 1.5 ? 1 : m < 3 ? 2 : m < 7 ? 5 : 10) * p; }
+function niceCeil(v){ if (v <= 0) return 1; const p = Math.pow(10, Math.floor(Math.log10(v))); const m = v / p;
+  for (const k of [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10]) if (m <= k + 1e-9) return k * p; return 10 * p; }
+
+// ---------- Senyals periòdics ----------
+const periodic = () => S.sig !== 'snd';
+function components(){
+  const out = [], f0 = S.f0;
+  if (S.sig === 'sin') { out.push({ n:1, f:f0, a:1, ph:-90 }); return out; }
+  for (let n = 1; n * f0 <= FMAX; n += 2)
+    out.push({ n, f:n * f0, a: S.sig === 'sq' ? 4 / (Math.PI * n) : 8 / (Math.PI * Math.PI * n * n),
+      ph: S.sig === 'sq' || n % 4 === 1 ? -90 : 90 });   // triangular: signe alternat → ±90°
+  return out;
+}
+const fundAmp = () => S.sig === 'sin' ? 1 : S.sig === 'sq' ? 4 / Math.PI : 8 / (Math.PI * Math.PI);
+
+// ---------- FFT (radix-2) amb finestra de Hann ----------
+const fftCache = {};
+function fftTables(N){
+  if (fftCache[N]) return fftCache[N];
+  const cos = new Float64Array(N / 2), sin = new Float64Array(N / 2), hann = new Float64Array(N);
+  for (let i = 0; i < N / 2; i++){ cos[i] = Math.cos(2 * Math.PI * i / N); sin[i] = -Math.sin(2 * Math.PI * i / N); }
+  for (let i = 0; i < N; i++) hann[i] = 0.5 * (1 - Math.cos(2 * Math.PI * i / N)); // Hann periòdica: Σw = N/2
+  return (fftCache[N] = { cos, sin, hann });
+}
+function fft(re, im){
+  const n = re.length, T = fftTables(n);
+  for (let i = 1, j = 0; i < n; i++){ let b = n >> 1; for (; j & b; b >>= 1) j ^= b; j ^= b;
+    if (i < j){ let t = re[i]; re[i] = re[j]; re[j] = t; t = im[i]; im[i] = im[j]; im[j] = t; } }
+  for (let len = 2; len <= n; len <<= 1){ const half = len >> 1, st = n / len;
+    for (let i = 0; i < n; i += len) for (let k = 0; k < half; k++){
+      const wr = T.cos[k * st], wi = T.sin[k * st], a = i + k, b = a + half;
+      const tr = re[b] * wr - im[b] * wi, ti = re[b] * wi + im[b] * wr;
+      re[b] = re[a] - tr; im[b] = im[a] - ti; re[a] += tr; im[a] += ti; } }
+}
+function spectrum(frame){
+  const N = frame.length, T = fftTables(N), re = new Float64Array(N), im = new Float64Array(N);
+  for (let i = 0; i < N; i++) re[i] = frame[i] * T.hann[i];
+  fft(re, im);
+  const sw = N / 2, mags = new Float32Array(N / 2 + 1);   // correcció del guany coherent de la finestra
+  for (let k = 0; k <= N / 2; k++){
+    const m = Math.hypot(re[k], im[k]) / sw;
+    mags[k] = (k === 0 || k === N / 2) ? m : 2 * m;          // només freqüències positives
+  }
+  S.re = re; S.im = im;
+  return mags;
+}
+function demoFrame(N){ const x = new Float32Array(N);
+  for (let i = 0; i < N; i++){ const t = i / DEMO_FS; let v = 0; for (const c of DEMO) v += c.a * Math.sin(2 * Math.PI * c.f * t + c.p); x[i] = v; }
+  return x; }
+
+// ---------- Web Audio ----------
+let actx = null, analyser = null, sink = null, tbuf = null;
+let micStream = null, micSrc = null, fileBuf = null, fileMono = null, fileName = '', fileSrc = null,
+    filePos = 0, fileStart = 0, filePlaying = false, demoNodes = null;
+function getCtx(){
+  if (!actx){ const AC = window.AudioContext || window.webkitAudioContext; if (!AC) throw new Error('noaudio'); actx = new AC(); }
+  if (actx.state === 'suspended') actx.resume();
+  return actx;
+}
+function ensureAnalyser(){
+  const ctx = getCtx();
+  if (!analyser){ analyser = ctx.createAnalyser(); sink = ctx.createGain(); sink.gain.value = 0; analyser.connect(sink); sink.connect(ctx.destination); }
+  analyser.fftSize = S.N; tbuf = new Float32Array(S.N);
+  return analyser;
+}
+function msg(text, kind){ const m = $('soundMsg'); m.className = 'msg' + (text ? ' ' + (kind || 'info') : ''); m.innerHTML = text || ''; }
+
+function stopMic(){
+  if (micStream){ micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+  if (micSrc){ try { micSrc.disconnect(); } catch(e){} micSrc = null; }
+  if (S.source === 'mic' && S.live){ S.live = false; msg('Micròfon aturat i alliberat. Es mostra l\'última captura.', 'info'); }
+  updateSoundUI();
+}
+async function startMic(){
+  msg('');
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    msg('Aquest navegador no permet accedir al micròfon en aquest context (pot caldre obrir la pàgina amb <b>https://</b> o des de <b>localhost</b>). Pots continuar amb la demostració o amb un fitxer.', 'err'); return; }
+  try {
+    const ctx = getCtx();
+    const stream = await navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:false, noiseSuppression:false, autoGainControl:false } });
+    pauseFile(); stopDemoAudio();
+    micStream = stream; micSrc = ctx.createMediaStreamSource(stream); micSrc.connect(ensureAnalyser());
+    S.source = 'mic'; S.fs = ctx.sampleRate; S.yF = 0; S.yT = 0; S.live = true;
+    msg('Micròfon actiu. Parla, xiula o fes sonar un instrument a prop.', 'info');
+    updateSoundUI(); loop();
+  } catch (e){
+    const n = e && e.name;
+    const t = n === 'NotAllowedError' || n === 'SecurityError' ? 'S\'ha denegat o bloquejat el permís del micròfon.'
+      : n === 'NotFoundError' ? 'No s\'ha trobat cap micròfon.'
+      : n === 'NotReadableError' ? 'El micròfon l\'està fent servir una altra aplicació.'
+      : e && e.message === 'noaudio' ? 'Aquest navegador no admet la Web Audio API.'
+      : 'No s\'ha pogut accedir al micròfon.';
+    msg(t + ' El fitxer d\'àudio i la demostració continuen disponibles.', 'err');
+  }
+}
+function toMono(buf){ const n = buf.length, out = new Float32Array(n), ch = buf.numberOfChannels;
+  for (let c = 0; c < ch; c++){ const d = buf.getChannelData(c); for (let i = 0; i < n; i++) out[i] += d[i] / ch; } return out; }
+function fileFrameAt(sec){
+  const N = S.N, fr = new Float32Array(N); if (!fileMono) return fr;
+  let s0 = Math.max(0, Math.min(fileMono.length - N, Math.round(sec * fileBuf.sampleRate)));
+  for (let i = 0; i < N; i++) fr[i] = fileMono[s0 + i] || 0; return fr;
+}
+function loudestSec(){
+  const N = S.N, step = Math.max(N, Math.floor(fileMono.length / 200)); let best = 0, bi = 0;
+  for (let s = 0; s + N <= fileMono.length; s += step){ let e = 0; for (let i = s; i < s + N; i += 4) e += fileMono[i] * fileMono[i]; if (e > best){ best = e; bi = s; } }
+  return bi / fileBuf.sampleRate;
+}
+async function loadFile(f){
+  if (!f) return;
+  msg('Descodificant el fitxer…', 'info');
+  try {
+    const ctx = getCtx(); const ab = await f.arrayBuffer();
+    const buf = await new Promise((res, rej) => { const p = ctx.decodeAudioData(ab, res, rej); if (p && p.then) p.then(res, rej); });
+    stopMic(); stopDemoAudio(); pauseFile();
+    fileBuf = buf; fileMono = toMono(buf); fileName = f.name; S.source = 'file'; S.fs = buf.sampleRate;
+    filePos = loudestSec(); S.frame = fileFrameAt(filePos); S.yF = 0; S.yT = 0;
+    msg('Fitxer carregat. Es mostra el fragment de més intensitat; prem «Reprodueix» per veure l\'espectre en temps real.', 'info');
+    updateSoundUI(); draw();
+  } catch (e){ msg('No s\'ha pogut llegir aquest fitxer d\'àudio. Prova un altre format (WAV, MP3, OGG…).', 'err'); }
+  $('fileIn').value = '';
+}
+function playFile(){
+  if (!fileBuf) return;
+  const ctx = getCtx(); if (filePos >= fileBuf.duration - 0.05) filePos = 0;
+  fileSrc = ctx.createBufferSource(); fileSrc.buffer = fileBuf;
+  fileSrc.connect(ensureAnalyser()); fileSrc.connect(ctx.destination);
+  fileSrc.onended = () => { if (filePlaying){ filePlaying = false; S.live = false; filePos = 0; fileSrc = null; updateSoundUI(); } };
+  fileStart = ctx.currentTime; fileSrc.start(0, filePos); filePlaying = true;
+  S.fs = ctx.sampleRate; S.live = true; updateSoundUI(); loop();
+}
+function pauseFile(){
+  if (!filePlaying || !fileSrc) return;
+  filePlaying = false; filePos += actx.currentTime - fileStart;
+  try { fileSrc.stop(); } catch(e){} fileSrc.disconnect(); fileSrc = null;
+  S.live = false; S.fs = fileBuf.sampleRate; S.frame = fileFrameAt(filePos); updateSoundUI(); draw();
+}
+function playDemoAudio(){
+  try {
+    const ctx = getCtx(), g = ctx.createGain(); g.gain.value = 0.25; g.connect(ctx.destination);
+    const osc = DEMO.map(c => { const o = ctx.createOscillator(), og = ctx.createGain(); o.frequency.value = c.f; og.gain.value = c.a; o.connect(og); og.connect(g); o.start(); return o; });
+    demoNodes = { g, osc };
+  } catch (e){ msg('Aquest navegador no pot reproduir àudio, però l\'espectre de la demostració continua disponible.', 'err'); }
+  updateSoundUI();
+}
+function stopDemoAudio(){ if (demoNodes){ demoNodes.osc.forEach(o => { try { o.stop(); } catch(e){} }); demoNodes.g.disconnect(); demoNodes = null; } updateSoundUI(); }
+function useDemo(){ stopMic(); pauseFile(); S.source = 'demo'; S.fs = DEMO_FS; S.frame = demoFrame(S.N); S.yF = 0; S.yT = 0; msg(''); updateSoundUI(); draw(); }
+function stopAllAudio(){ stopMic(); pauseFile(); stopDemoAudio(); }
+
+function loop(){
+  if (!S.live || !analyser) return;
+  analyser.getFloatTimeDomainData(tbuf);
+  S.frame = tbuf; draw();
+  requestAnimationFrame(loop);
+}
+
+// ---------- Dibuix ----------
+function setup(cv){
+  const r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1, w = Math.max(1, r.width), h = Math.max(1, r.height);
+  if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)){ cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
+  const c = cv.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, w, h); c.fillStyle = '#fff'; c.fillRect(0, 0, w, h);
+  return { c, w, h };
+}
+function axes(c, w, h, o){
+  const m = o.m, pw = w - m.l - m.r, ph = h - m.t - m.b;
+  const X = v => m.l + (v - o.x0) / (o.x1 - o.x0) * pw, Y = v => m.t + (o.y1 - v) / (o.y1 - o.y0) * ph;
+  const small = w < 520;
+  c.font = (small ? 11 : 12) + 'px -apple-system,Segoe UI,Roboto,Arial,sans-serif'; c.lineWidth = 1;
+  c.textAlign = 'center'; c.textBaseline = 'top'; c.fillStyle = C.txt;
+  for (let i = Math.ceil(o.x0 / o.xs - 1e-9); i * o.xs <= o.x1 + 1e-9; i++){
+    const v = i * o.xs, x = Math.round(X(v)) + .5; c.strokeStyle = C.grid;
+    c.beginPath(); c.moveTo(x, m.t); c.lineTo(x, m.t + ph); c.stroke(); c.fillText(o.xf(v), x, m.t + ph + 6); }
+  c.textAlign = 'right'; c.textBaseline = 'middle';
+  for (let i = Math.ceil(o.y0 / o.ys - 1e-9); i * o.ys <= o.y1 + 1e-9; i++){
+    const v = i * o.ys, y = Math.round(Y(v)) + .5; c.strokeStyle = Math.abs(v) < 1e-12 ? C.axis : C.grid;
+    c.beginPath(); c.moveTo(m.l, y); c.lineTo(m.l + pw, y); c.stroke(); c.fillText(o.yf(v), m.l - 7, y); }
+  c.strokeStyle = '#E6E5E3'; c.strokeRect(m.l + .5, m.t + .5, pw, ph);
+  c.fillStyle = C.dark; c.font = '600 ' + (small ? 12 : 13) + 'px -apple-system,Segoe UI,Roboto,Arial,sans-serif';
+  c.textAlign = 'center'; c.textBaseline = 'bottom'; c.fillText(o.xl, m.l + pw / 2, h - 3);
+  c.save(); c.translate(13, m.t + ph / 2); c.rotate(-Math.PI / 2); c.textBaseline = 'middle'; c.fillText(o.yl, 0, 0); c.restore();
+  return { X, Y, pw, ph, m, small };
+}
+function clip(c, A){ c.save(); c.beginPath(); c.rect(A.m.l, A.m.t - 2, A.pw, A.ph + 4); c.clip(); }
+function freqAxisOpts(Z){
+  const xs = niceStep(Z, 10), k = Z >= 5000;
+  return { x0:0, x1:Z, xs, xf: v => k ? fmt(v / 1000, dec(xs / 1000)) : fmt(v, 0), xl: k ? 'Freqüència (kHz)' : 'Freqüència (Hz)' };
+}
+
+// Gràfica temporal: senyals periòdics ideals
+function drawTimePeriodic(){
+  const { c, w, h } = setup($('cvT')), T = 1000 / S.f0, tot = 4 * T, xs = niceStep(tot, w < 520 ? 5 : 8);
+  const A = axes(c, w, h, { m:{ l:54, r:14, t:34, b:44 }, x0:0, x1:tot, xs, xf: v => fmt(v, dec(xs)), y0:-1.3, y1:1.3, ys:0.5, yf: v => fmt(v, 1), xl:'Temps (ms)', yl:'Amplitud' });
+  const { X, Y } = A;
+  // període T
+  c.strokeStyle = 'rgba(213,128,59,.35)'; c.setLineDash([3, 3]);
+  [0, T].forEach(t => { c.beginPath(); c.moveTo(X(t), A.m.t); c.lineTo(X(t), A.m.t + A.ph); c.stroke(); }); c.setLineDash([]);
+  const yb = A.m.t - 8; c.strokeStyle = C.fund; c.lineWidth = 2;
+  c.beginPath(); c.moveTo(X(0), yb); c.lineTo(X(T), yb); c.moveTo(X(0), yb - 5); c.lineTo(X(0), yb + 5); c.moveTo(X(T), yb - 5); c.lineTo(X(T), yb + 5); c.stroke();
+  c.fillStyle = C.fund; c.font = '600 12px -apple-system,Segoe UI,Arial,sans-serif'; c.textAlign = 'left'; c.textBaseline = 'bottom';
+  c.fillText('T = 1/f₀ = ' + fmt(T, T < 10 ? 1 : 0) + ' ms', X(T) + 8, yb + 6);
+  clip(c, A);
+  if (S.showFund){
+    c.strokeStyle = C.fund; c.lineWidth = 2; c.setLineDash([6, 5]); c.beginPath();
+    const a1 = fundAmp();
+    for (let i = 0; i <= 1200; i++){ const t = tot * i / 1200, y = Y(a1 * Math.sin(2 * Math.PI * t / T)); i ? c.lineTo(X(t), y) : c.moveTo(X(t), y); }
+    c.stroke(); c.setLineDash([]);
+  }
+  c.strokeStyle = C.sig; c.lineWidth = 3; c.lineJoin = 'miter'; c.beginPath();
+  if (S.sig === 'sin'){
+    for (let i = 0; i <= 1600; i++){ const t = tot * i / 1600, y = Y(Math.sin(2 * Math.PI * t / T)); i ? c.lineTo(X(t), y) : c.moveTo(X(t), y); }
+  } else if (S.sig === 'tri'){            // rampes rectes entre vèrtexs
+    c.moveTo(X(0), Y(0));
+    for (let k = 0; T / 4 + k * T / 2 < tot; k++) c.lineTo(X(T / 4 + k * T / 2), Y(k % 2 ? -1 : 1));
+    c.lineTo(X(tot), Y(0));
+  } else {                                // salts verticals a cada mig període
+    c.moveTo(X(0), Y(1));
+    for (let k = 0; k < 8; k++){ const v = k % 2 ? -1 : 1; c.lineTo(X(k * T / 2), Y(v)); c.lineTo(X((k + 1) * T / 2), Y(v)); }
+  }
+  c.stroke(); c.restore();
+}
+
+// Gràfica temporal: so
+function drawTimeSound(){
+  const { c, w, h } = setup($('cvT')), fs = S.fs, fr = S.frame || new Float32Array(S.N);
+  const nW = Math.max(8, Math.min(fr.length, Math.round(S.winMs * fs / 1000))), dur = nW / fs * 1000;
+  let pk = 0; for (let i = 0; i < nW; i++) pk = Math.max(pk, Math.abs(fr[i]));
+  const target = niceCeil(Math.max(pk * 1.1, 0.01));
+  S.yT = S.live ? (target > S.yT ? target : Math.max(target, S.yT * 0.98)) : target;
+  const top = niceCeil(S.yT), ys = niceStep(top, 2), xs = niceStep(dur, w < 520 ? 5 : 8);
+  const A = axes(c, w, h, { m:{ l:58, r:14, t:18, b:44 }, x0:0, x1:dur, xs, xf: v => fmt(v, dec(xs)), y0:-top, y1:top, ys, yf: v => fmt(v, dec(ys)), xl:'Temps (ms)', yl:'Amplitud' });
+  const { X, Y } = A; clip(c, A);
+  c.strokeStyle = C.sig; c.lineWidth = 1.8; c.beginPath();
+  if (nW > A.pw * 2){
+    const cols = Math.floor(A.pw);
+    for (let col = 0; col < cols; col++){
+      const a = Math.floor(col * nW / cols), b = Math.floor((col + 1) * nW / cols); let mn = 1e9, mx = -1e9;
+      for (let i = a; i < b; i++){ if (fr[i] < mn) mn = fr[i]; if (fr[i] > mx) mx = fr[i]; }
+      const x = A.m.l + col + .5; if (col === 0) c.moveTo(x, Y(mx)); c.lineTo(x, Y(mx)); c.lineTo(x, Y(mn));
+    }
+  } else for (let i = 0; i < nW; i++){ const x = X(i / fs * 1000), y = Y(fr[i]); i ? c.lineTo(x, y) : c.moveTo(x, y); }
+  c.stroke(); c.restore();
+}
+
+// Espectre teòric de línies
+function drawSpecPeriodic(){
+  const cv = $('cvF'), { c, w, h } = setup(cv), Z = S.zoom, comps = components();
+  const top = niceCeil(Math.max(...comps.map(k => k.a)) * 1.15), ys = niceStep(top, 5);
+  const A = axes(c, w, h, Object.assign({ m:{ l:58, r:14, t:22, b:44 }, y0:0, y1:top, ys, yf: v => fmt(v, dec(ys)), yl:'Amplitud' }, freqAxisOpts(Z)));
+  const { X, Y } = A, vis = comps.filter(k => k.f <= Z);
+  let hov = null;
+  if (S.hover !== null && vis.length){ let best = 1e9; vis.forEach(k => { const d = Math.abs(X(k.f) - S.hover); if (d < best){ best = d; hov = k; } }); if (best > 16) hov = null; }
+  clip(c, A);
+  vis.slice().reverse().forEach(k => {
+    const x = X(k.f), f0 = k.n === 1, on = hov === k;
+    c.strokeStyle = f0 ? C.fund : C.harm; c.lineWidth = (f0 ? 4 : 2.6) + (on ? 1.5 : 0);
+    c.beginPath(); c.moveTo(x, Y(0)); c.lineTo(x, Y(k.a)); c.stroke();
+    c.fillStyle = c.strokeStyle; c.beginPath(); c.arc(x, Y(k.a), f0 ? 4.5 : 3.2, 0, 2 * Math.PI); c.fill();
+    if (on){ c.strokeStyle = C.dark; c.lineWidth = 1.5; c.beginPath(); c.arc(x, Y(k.a), 7, 0, 2 * Math.PI); c.stroke(); }
+  });
+  c.restore();
+  // etiquetes dels primers harmònics
+  const sp = vis.length > 1 ? X(vis[1].f) - X(vis[0].f) : 999;
+  c.font = '600 12px -apple-system,Segoe UI,Arial,sans-serif'; c.textAlign = 'center'; c.textBaseline = 'bottom';
+  vis.forEach((k, i) => { if (k.n <= 9 && (i === 0 || sp >= 34)){ c.fillStyle = k.n === 1 ? C.fund : '#1C5C9C'; c.fillText((k.n === 1 ? '' : k.n) + 'f₀', X(k.f), Y(k.a) - 7); } });
+  if (S.sig !== 'sin'){
+    c.fillStyle = C.txt; c.font = '12px -apple-system,Segoe UI,Arial,sans-serif'; c.textAlign = 'right'; c.textBaseline = 'top';
+    c.fillText(Z < FMAX ? 'més harmònics fora del zoom →' : 'infinits harmònics més enllà de 20 kHz →', A.m.l + A.pw - 6, A.m.t + 6);
+  }
+  drawPhasePeriodic(vis, hov);
+  tip(hov ? (hov.n === 1 ? '<b>Fonamental (f₀)</b>' : '<b>Harmònic ' + hov.n + ' (' + hov.n + 'f₀)</b>') + '<br>f = ' + fmtHz(hov.f) + '<br>Amplitud = ' + fmtA(hov.a) + '<br>Fase φ = ' + fmtDeg(hov.ph) : null, hov ? X(hov.f) : 0, hov ? Y(hov.a) : 0, w);
+}
+
+// Espectre estimat amb FFT
+function drawSpecSound(){
+  const cv = $('cvF'), { c, w, h } = setup(cv), Z = S.zoom, fr = S.frame || new Float32Array(S.N), fs = S.fs;
+  const mags = S.mags = spectrum(fr), N = fr.length, df = fs / N, nyq = fs / 2, kmax = Math.min(N / 2, Math.floor(Math.min(Z, nyq) / df));
+  let pk = 0, pkK = 1; for (let k = 1; k <= kmax; k++) if (mags[k] > pk){ pk = mags[k]; pkK = k; }
+  let ref = S.source === 'demo' ? Math.max(pk, ...DEMO.filter(d => d.f <= Z).map(d => d.a), 0) : pk;
+  const target = Math.max(ref * 1.15, 1e-4);
+  S.yF = S.live ? (target > S.yF ? target : Math.max(target, S.yF * 0.985)) : target;
+  const top = niceCeil(S.yF), ys = niceStep(top, 5);
+  const A = axes(c, w, h, Object.assign({ m:{ l:62, r:14, t:22, b:44 }, y0:0, y1:top, ys, yf: v => fmt(v, dec(ys)), yl:'Amplitud (lineal)' }, freqAxisOpts(Z)));
+  const { X, Y } = A;
+  // zona sense dades (per sobre de Nyquist)
+  if (nyq < Z){
+    const x0 = X(nyq); c.save(); c.beginPath(); c.rect(x0, A.m.t, A.m.l + A.pw - x0, A.ph); c.clip();
+    c.fillStyle = '#F6F5F3'; c.fillRect(x0, A.m.t, A.pw, A.ph); c.strokeStyle = '#E2E0DC'; c.lineWidth = 1;
+    for (let x = x0 - A.ph; x < A.m.l + A.pw; x += 8){ c.beginPath(); c.moveTo(x, A.m.t + A.ph); c.lineTo(x + A.ph, A.m.t); c.stroke(); }
+    c.fillStyle = C.txt; c.font = '12px -apple-system,Segoe UI,Arial,sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    if (A.m.l + A.pw - x0 > 120) c.fillText('Sense dades: f > f_s/2', (x0 + A.m.l + A.pw) / 2, A.m.t + A.ph / 2);
+    c.restore();
+  }
+  clip(c, A);
+  if (S.source === 'demo'){
+    c.strokeStyle = '#9C9994'; c.lineWidth = 1.5; c.setLineDash([4, 4]);
+    DEMO.forEach(d => { if (d.f <= Z){ c.beginPath(); c.moveTo(X(d.f), Y(0)); c.lineTo(X(d.f), Y(d.a)); c.stroke(); } }); c.setLineDash([]);
+  }
+  const pts = []; let last = -1;
+  for (let k = 0; k <= kmax; k++){ const x = X(k * df), col = Math.round(x);
+    if (col === last && pts.length){ if (mags[k] > pts[pts.length - 1].v) pts[pts.length - 1].v = mags[k]; } else pts.push({ x, v:mags[k] }); last = col; }
+  if (pts.length){
+    c.beginPath(); c.moveTo(pts[0].x, Y(0)); pts.forEach(p => c.lineTo(p.x, Y(p.v))); c.lineTo(pts[pts.length - 1].x, Y(0)); c.closePath();
+    c.fillStyle = 'rgba(39,131,222,.22)'; c.fill();
+    c.beginPath(); pts.forEach((p, i) => i ? c.lineTo(p.x, Y(p.v)) : c.moveTo(p.x, Y(p.v))); c.strokeStyle = C.sig; c.lineWidth = 1.6; c.stroke();
+  }
+  if (pk > 1e-5){ c.fillStyle = C.fund; c.beginPath(); c.arc(X(pkK * df), Y(pk), 5, 0, 2 * Math.PI); c.fill(); }
+  // cursor
+  let hk = null;
+  if (S.hover !== null){
+    const f = (S.hover - A.m.l) / A.pw * Z, rad = 6 / A.pw * Z;
+    let best = -1; for (let k = Math.max(0, Math.floor((f - rad) / df)); k <= Math.min(kmax, Math.ceil((f + rad) / df)); k++) if (mags[k] > best){ best = mags[k]; hk = k; }
+    if (f > nyq) hk = null;
+    if (hk !== null){ const x = X(hk * df); c.strokeStyle = 'rgba(44,44,43,.45)'; c.lineWidth = 1; c.beginPath(); c.moveTo(x, A.m.t); c.lineTo(x, A.m.t + A.ph); c.stroke(); }
+  }
+  c.restore();
+  if (pk > 1e-5){
+    c.fillStyle = '#A85F22'; c.font = '600 12px -apple-system,Segoe UI,Arial,sans-serif'; c.textBaseline = 'bottom';
+    const x = X(pkK * df); c.textAlign = x > A.m.l + A.pw - 150 ? 'right' : 'left';
+    c.fillText('Pic màxim: ' + fmtHz(pkK * df) + ' · ' + fmtA(pk), x + (c.textAlign === 'left' ? 8 : -8), Y(pk) - 4);
+  }
+  const thr = Math.max(pk * 0.08, 1e-4), peaks = [];
+  for (let k = 1; k <= kmax; k++) if (mags[k] >= thr && mags[k] >= mags[k - 1] && mags[k] > (k < N / 2 ? mags[k + 1] : 0)) peaks.push(k);
+  peaks.sort((a, b) => mags[b] - mags[a]); peaks.length = Math.min(peaks.length, 60);
+  drawPhaseSound(peaks, pkK, df, kmax, nyq, hk);
+  if (hk !== null) tip('<b>Espectre estimat (FFT)</b><br>f ≈ ' + fmtHz(hk * df) + ' (bin ' + hk + ')<br>Amplitud ≈ ' + fmtA(mags[hk])
+    + '<br>Fase ≈ ' + (mags[hk] >= thr ? fmtDeg(binPhase(hk)) : 'no significativa'), X(hk * df), Y(mags[hk]), w);
+  else if (S.hover !== null && (S.hover - A.m.l) / A.pw * Z > nyq) tip('Sense dades per sobre de f<sub>s</sub>/2 = ' + fmtHz(nyq), S.hover, A.m.t + 30, w);
+  else tip(null);
+}
+
+// Espectre de fase (mateix eix de freqüència que el mòdul)
+function phaseAxes(ml){
+  const { c, w, h } = setup($('cvP'));
+  const A = axes(c, w, h, Object.assign({ m:{ l:ml, r:14, t:12, b:44 }, y0:-215, y1:215, ys:90, yf: v => fmt(v) + '°', yl:'Fase (°)' }, freqAxisOpts(S.zoom)));
+  return { c, A };
+}
+function stem(c, A, f, ph, col, wdt, on){
+  const x = A.X(f); c.strokeStyle = col; c.fillStyle = col; c.lineWidth = wdt + (on ? 1.5 : 0);
+  c.beginPath(); c.moveTo(x, A.Y(0)); c.lineTo(x, A.Y(ph)); c.stroke();
+  c.beginPath(); c.arc(x, A.Y(ph), wdt > 3 ? 4.5 : 3.2, 0, 2 * Math.PI); c.fill();
+  if (on){ c.strokeStyle = C.dark; c.lineWidth = 1.5; c.beginPath(); c.arc(x, A.Y(ph), 7, 0, 2 * Math.PI); c.stroke(); }
+}
+function drawPhasePeriodic(vis, hov){
+  const { c, A } = phaseAxes(58); clip(c, A);
+  vis.slice().reverse().forEach(k => stem(c, A, k.f, k.ph, k.n === 1 ? C.fund : C.harm, k.n === 1 ? 4 : 2.6, hov === k));
+  c.restore();
+  $('phNote').textContent = S.sig === 'sin' ? 'Una sola component, amb φ = −90° (és un sinus).'
+    : S.sig === 'sq' ? 'Tots els harmònics tenen φ = −90°: tots són sinus amb coeficient positiu.'
+    : 'Els harmònics alternen entre −90° (coeficient +) i +90° (coeficient −).';
+}
+function drawPhaseSound(peaks, pkK, df, kmax, nyq, hk){
+  const { c, A } = phaseAxes(62);
+  if (nyq < S.zoom){ const x0 = A.X(nyq); c.fillStyle = '#F6F5F3'; c.fillRect(x0, A.m.t, A.m.l + A.pw - x0, A.ph); }
+  clip(c, A);
+  if (S.source === 'demo'){
+    c.strokeStyle = '#9C9994'; c.lineWidth = 1.5; c.setLineDash([4, 4]);
+    DEMO.forEach(d => { if (d.f <= S.zoom){ const ph = wrapDeg(d.p * 180 / Math.PI - 90); c.beginPath(); c.moveTo(A.X(d.f), A.Y(0)); c.lineTo(A.X(d.f), A.Y(ph)); c.stroke(); } });
+    c.setLineDash([]);
+  }
+  peaks.slice().reverse().forEach(k => stem(c, A, k * df, binPhase(k), k === pkK ? C.fund : C.sig, k === pkK ? 3.5 : 2.2, k === hk));
+  if (hk !== null){ const x = A.X(hk * df); c.strokeStyle = 'rgba(44,44,43,.45)'; c.lineWidth = 1; c.beginPath(); c.moveTo(x, A.m.t); c.lineTo(x, A.m.t + A.ph); c.stroke(); }
+  c.restore();
+  $('phNote').textContent = 'Fase als pics significatius (≥ 8 % del pic màxim), mesurada respecte de l\'inici de la finestra FFT.'
+    + (S.live ? ' Canvia contínuament perquè la finestra es desplaça.' : '') + (S.source === 'demo' ? ' Les línies discontínues són les fases teòriques.' : '');
+}
+
+function tip(html, x, y, w){
+  const t = $('tip'); if (!html){ t.style.display = 'none'; return; }
+  t.innerHTML = html; t.style.display = 'block';
+  const tw = t.offsetWidth, th = t.offsetHeight;
+  let left = x + 12; if (left + tw > w - 4) left = x - tw - 12; left = Math.max(4, left);
+  t.style.left = left + 'px'; t.style.top = Math.max(4, y - th - 10) + 'px';
+}
+
+// ---------- Textos i interfície ----------
+const SIG_NAME = { sin:'sinusoidal', tri:'triangular', sq:'quadrat', snd:'so' };
+function stat(k, v){ return '<div class="stat"><div class="k">' + k + '</div><div class="v">' + v + '</div></div>'; }
+function updateTexts(){
+  const st = $('stats'), Z = S.zoom;
+  if (periodic()){
+    const comps = components(), T = 1000 / S.f0;
+    st.innerHTML = stat('Freqüència fonamental f₀', fmtHz(S.f0)) + stat('Període T = 1/f₀', fmt(T, T < 10 ? 1 : 0) + ' ms')
+      + stat('Amplitud de la fonamental', fmtA(fundAmp())) + stat('Components fins a 20 kHz', comps.length)
+      + stat('Visibles amb el zoom', comps.filter(k => k.f <= Z).length);
+    $('tBadge').textContent = 'Senyal ideal · 4 períodes';
+    $('fBadge').textContent = 'Espectre teòric de línies'; $('fBadge').className = 'badge th';
+    $('tLegend').innerHTML = '<span><i class="sw"></i>Senyal x(t)</span>' + (S.showFund ? '<span><i class="sw o d"></i>Component fonamental</span>' : '') + '<span><i class="sw o"></i>Període T</span>';
+    $('fLegend').innerHTML = '<span><i class="sw o"></i>Fonamental f₀</span>' + (S.sig === 'sin' ? '' : '<span><i class="sw"></i>Harmònics (n·f₀)</span>') + '<span style="color:var(--muted)">Passa el cursor o toca una línia per veure\'n els valors.</span>';
+    $('harmList').innerHTML = comps.slice(0, 6).map(k => '<span class="' + (k.n === 1 ? 'f0' : '') + '">' + (k.n === 1 ? 'f₀' : k.n + 'f₀') + ' = ' + fmtHz(k.f) + ' · ' + fmtA(k.a) + '</span>').join('') + (comps.length > 6 ? '<span>… ' + (comps.length - 6) + ' més fins a 20 kHz</span>' : '');
+    $('linkTxt').innerHTML = '🔗 <b>Les dues gràfiques són el mateix senyal.</b> El període <b>T = ' + fmt(T, T < 10 ? 1 : 0) + ' ms</b> de dalt correspon a la línia taronja <b>f₀ = 1/T = ' + fmtHz(S.f0) + '</b> de baix. '
+      + (S.sig === 'sin' ? 'Una sinusoide pura és una sola línia.' : 'Els canvis bruscos o els vèrtexs de la forma d\'ona necessiten harmònics a freqüències més altes.') + ' Si augmentes f₀, el període s\'escurça i les línies s\'allunyen entre si.';
+  } else {
+    const fs = S.fs, N = S.N, src = S.source === 'demo' ? 'Demostració' : S.source === 'mic' ? 'Micròfon' + (S.live ? '' : ' (aturat)') : 'Fitxer';
+    st.innerHTML = stat('Font', src) + stat('Freqüència de mostreig f<sub>s</sub>', fmtHz(fs)) + stat('Mida de la FFT N', fmt(N))
+      + stat('Resolució Δf = f<sub>s</sub>/N', fmt(fs / N, 2) + ' Hz') + stat('Durada de la finestra N/f<sub>s</sub>', fmt(N / fs * 1000, 1) + ' ms') + stat('Nyquist f<sub>s</sub>/2', fmt(fs / 2000, 2) + ' kHz');
+    $('tBadge').textContent = 'Fragment de ' + fmt(Math.min(S.winMs, N / fs * 1000), 0) + ' ms';
+    $('fBadge').textContent = 'Espectre estimat amb FFT · finestra de Hann'; $('fBadge').className = 'badge fft';
+    $('tLegend').innerHTML = '<span><i class="sw"></i>Forma d\'ona x(t)</span>';
+    $('fLegend').innerHTML = '<span><i class="sw fill"></i>Espectre estimat</span><span><i class="sw o" style="width:12px;height:12px;border-radius:50%;border:none;background:var(--orange)"></i>Pic màxim</span>'
+      + (S.source === 'demo' ? '<span><i class="sw g d"></i>Components teòriques de la demo</span>' : '') + (fs / 2 < Z ? '<span><i class="sw box"></i>Zona sense dades (&gt; f<sub>s</sub>/2)</span>' : '');
+    $('harmList').innerHTML = S.source === 'demo' ? DEMO.map((d, i) => '<span class="' + (i ? '' : 'f0') + '">' + fmtHz(d.f) + ' · amplitud ' + fmt(d.a, 2) + ' · fase ' + fmtDeg(wrapDeg(d.p * 180 / Math.PI - 90)) + '</span>').join('') : '';
+    $('linkTxt').innerHTML = '🔗 <b>Les dues gràfiques són el mateix so.</b> A dalt en veus la forma d\'ona; a baix, de quines freqüències està fet. Les oscil·lacions ràpides apareixen a la dreta de l\'espectre (freqüències altes) i les lentes, a l\'esquerra.';
+  }
+  const ex = {
+    sin:['Senyal sinusoidal', '<p>La sinusoide és el senyal més simple: té <b>una sola component freqüencial</b>, a f₀, amb amplitud 1. Per això el seu espectre és una única línia.</p><p><code>x(t) = sin(2π·f₀·t)</code></p>'],
+    sq:['Senyal quadrat (cicle de treball del 50 %)', '<p>L\'ona quadrada conté només <b>harmònics senars</b> (f₀, 3f₀, 5f₀…). La seva amplitud disminueix proporcionalment a <b>1/n</b>, és a dir, lentament: <code>A<sub>n</sub> = 4/(π·n)</code>.</p><p>Els salts verticals necessiten molts harmònics per formar-se. La fonamental (4/π ≈ 1,273) és més gran que el pic de l\'ona.</p>'],
+    tri:['Senyal triangular', '<p>L\'ona triangular també conté només <b>harmònics senars</b>, però disminueixen <b>molt més ràpidament</b>, proporcionalment a <b>1/n²</b>: <code>A<sub>n</sub> = 8/(π²·n²)</code>.</p><p>Com que no té salts sinó vèrtexs, s\'assembla més a una sinusoide i gairebé tota l\'energia és a la fonamental.</p>'],
+    snd:['So', '<p>Un so real pot contenir <b>moltes components</b> a la vegada, i <b>canvien amb el temps</b>: la veu, la música o el soroll tenen espectres que es mouen constantment.</p><p>L\'espectre es calcula sobre una finestra de N mostres. Una N més gran dona més resolució en freqüència (Δf més petita), però la finestra és més llarga i els canvis ràpids queden més promitjats.</p>']
+  }[S.sig];
+  $('exTitle').textContent = ex[0]; $('exBody').innerHTML = ex[1];
+}
+function updateSoundUI(){
+  $('bDemo').classList.toggle('on', S.source === 'demo');
+  $('bFile').classList.toggle('on', S.source === 'file');
+  const micOn = !!micStream; $('bMic').textContent = micOn ? '⏹ Atura el micròfon' : '🎤 Activa el micròfon';
+  $('bMic').classList.toggle('danger', micOn); $('bMic').classList.toggle('on', S.source === 'mic' && !micOn);
+  $('demoBox').classList.toggle('hidden', S.source !== 'demo');
+  $('fileBox').classList.toggle('hidden', S.source !== 'file');
+  $('bDemoPlay').textContent = demoNodes ? '⏹ Atura el so de la demostració' : '🔊 Escolta la demostració';
+  $('bPlay').textContent = filePlaying ? '⏸ Pausa' : '▶ Reprodueix';
+  if (fileBuf) $('fileName').innerHTML = '<b>' + fileName.replace(/[<>&]/g, '') + '</b> · ' + fmt(fileBuf.duration, 1) + ' s · ' + fmtHz(fileBuf.sampleRate);
+  if (periodic() === false) updateTexts();
+}
+function syncControls(){
+  document.querySelectorAll('[data-sig]').forEach(b => { b.classList.toggle('on', b.dataset.sig === S.sig); b.setAttribute('aria-pressed', b.dataset.sig === S.sig); });
+  document.querySelectorAll('#freqChips .chip').forEach(b => b.classList.toggle('on', +b.dataset.f === S.f0));
+  document.querySelectorAll('#zoomChips .chip').forEach(b => b.classList.toggle('on', +b.dataset.z === S.zoom));
+  document.querySelectorAll('#nChips .chip').forEach(b => b.classList.toggle('on', +b.dataset.n === S.N));
+  $('freqGroup').classList.toggle('hidden', !periodic()); $('soundGroup').classList.toggle('hidden', periodic());
+  $('showFund').checked = S.showFund; $('winMs').value = S.winMs; $('winVal').textContent = S.winMs + ' ms';
+}
+function draw(){
+  if (periodic()){ drawTimePeriodic(); drawSpecPeriodic(); } else { drawTimeSound(); drawSpecSound(); }
+  updateTexts();
+}
+function refresh(){ syncControls(); draw(); }
+
+function chips(id, vals, key, label){
+  $(id).innerHTML = vals.map(v => '<button class="chip" data-' + key + '="' + v + '">' + label(v) + '</button>').join('');
+}
+chips('freqChips', FREQS, 'f', v => fmt(v) + ' Hz');
+chips('zoomChips', ZOOMS, 'z', v => '0–' + (v >= 1000 ? fmt(v / 1000) + ' kHz' : v + ' Hz'));
+chips('nChips', NS, 'n', v => fmt(v));
+$('demoList').innerHTML = DEMO.map(d => '<li>' + fmtHz(d.f) + ', amplitud ' + fmt(d.a, 2) + ', fase ' + fmtDeg(wrapDeg(d.p * 180 / Math.PI - 90)) + '</li>').join('');
+
+document.querySelectorAll('[data-sig]').forEach(b => b.addEventListener('click', () => {
+  const s = b.dataset.sig; if (s === S.sig) return;
+  if (s !== 'snd') stopAllAudio();
+  S.sig = s; S.hover = null;
+  if (s === 'snd' && !S.frame) useDemo();
+  refresh();
+}));
+$('freqChips').addEventListener('click', e => { const b = e.target.closest('.chip'); if (b){ S.f0 = +b.dataset.f; refresh(); } });
+$('zoomChips').addEventListener('click', e => { const b = e.target.closest('.chip'); if (b){ S.zoom = +b.dataset.z; S.yF = 0; refresh(); } });
+$('nChips').addEventListener('click', e => { const b = e.target.closest('.chip'); if (!b) return; S.N = +b.dataset.n; S.yF = 0;
+  if (S.live && analyser){ analyser.fftSize = S.N; tbuf = new Float32Array(S.N); }
+  else if (S.source === 'demo') S.frame = demoFrame(S.N);
+  else if (S.source === 'file') S.frame = fileFrameAt(filePos);
+  else if (S.frame && S.frame.length !== S.N){ const f = new Float32Array(S.N); f.set(S.frame.subarray(0, Math.min(S.N, S.frame.length))); S.frame = f; }
+  refresh(); });
+$('winMs').addEventListener('input', e => { S.winMs = +e.target.value; $('winVal').textContent = S.winMs + ' ms'; if (!S.live) draw(); });
+$('showFund').addEventListener('change', e => { S.showFund = e.target.checked; draw(); });
+$('bDemo').addEventListener('click', useDemo);
+$('fileIn').addEventListener('change', e => loadFile(e.target.files[0]));
+$('bMic').addEventListener('click', () => micStream ? stopMic() : startMic());
+$('bPlay').addEventListener('click', () => filePlaying ? pauseFile() : playFile());
+$('bDemoPlay').addEventListener('click', () => demoNodes ? stopDemoAudio() : playDemoAudio());
+$('bReset').addEventListener('click', () => {
+  stopAllAudio(); Object.assign(S, { sig:DEF.sig, f0:DEF.f0, zoom:DEF.zoom, N:DEF.N, winMs:DEF.winMs, showFund:false, hover:null, source:'demo', frame:null, fs:DEMO_FS, yF:0, yT:0 });
+  msg(''); updateSoundUI(); refresh();
+});
+['cvF', 'cvP'].forEach(id => {
+  const cv = $(id);
+  const setHover = e => { const r = cv.getBoundingClientRect(); S.hover = e.clientX - r.left; if (!S.live) draw(); };
+  cv.addEventListener('pointermove', setHover);
+  cv.addEventListener('pointerdown', setHover);
+  cv.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse'){ S.hover = null; if (!S.live) draw(); } });
+});
+window.addEventListener('pagehide', stopAllAudio);
+if ('ResizeObserver' in window) new ResizeObserver(() => { if (!S.live) draw(); }).observe(document.querySelector('.charts'));
+else window.addEventListener('resize', () => draw());
+
+refresh();
+})();
+</script>
+</body>
+</html>
